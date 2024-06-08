@@ -1,0 +1,25 @@
+{
+  "name": "llama-with-history",
+  "version": "1.0.0",
+  "description": " Api Made with Cloudflare Workers Ai ",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Guru322/Llama-with-history.git"
+  },
+  "author": "Guru",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Guru322/Llama-with-history/issues"
+  },
+  "homepage": "https://github.com/Guru322/Llama-with-history#readme",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.1"
+  }
+}
