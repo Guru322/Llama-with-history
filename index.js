@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -12,7 +13,7 @@ const API_TOKEN = process.env.API_TOKEN || '';
 
 const mongoURI = process.env.MONGO_URI || '';
 
-mongoose.connect(mongoURI, { replicaSet: process.env.REPLICA_NAME })
+mongoose.connect(mongoURI)
   .then(() => console.log('MongoDB connected successfully.'))
   .catch(err => console.error('Error connecting to MongoDB:', err));
 
@@ -28,6 +29,7 @@ const Conversation = mongoose.model('Conversation', conversationSchema);
 
 let customPrompt = '';
 
+// Load custom prompt from file
 function loadPrompt() {
   try {
     customPrompt = fs.readFileSync('prompt.txt', 'utf8');
@@ -40,6 +42,7 @@ function loadPrompt() {
 
 loadPrompt();
 
+// Fetch bot response and save conversation
 async function getBotResponse(username, message) {
   try {
     const userMessage = { role: "user", content: message };
@@ -88,22 +91,167 @@ async function getBotResponse(username, message) {
   }
 }
 
+// Fetch response from Bing and save conversation
+async function bing(username, query) {
+  try {
+    const userMessage = { role: "user", content: query };
+
+    let conversation = await Conversation.findOne({ username });
+    if (!conversation) {
+      conversation = new Conversation({ username, messages: [] });
+    }
+
+    const messages = conversation.messages.concat(userMessage);
+    conversation.messages = messages;
+
+    const response = await axios.post('https://nexra.aryahcr.cc/api/chat/complements', {
+      messages: [{ role: "assistant", content: "Hello! How can I help you today? 😊" }, ...messages],
+      conversation_style: "Balanced",
+      markdown: false,
+      stream: false,
+      model: "Bing"
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let result = null;
+    let err = null;
+
+    if (typeof response.data === "object") {
+      if (response.data.code === 200 && response.data.status === true) {
+        result = response.data;
+      } else {
+        err = response.data;
+      }
+    } else {
+      try {
+        const parsedData = JSON.parse(response.data.slice(response.data.indexOf("{")));
+        if (parsedData.code === 200 && parsedData.status === true) {
+          result = parsedData;
+        } else {
+          err = parsedData;
+        }
+      } catch (e) {
+        err = {
+          code: 500,
+          status: false,
+          error: "INTERNAL_SERVER_ERROR",
+          message: "general (unknown) error"
+        };
+      }
+    }
+
+    if (err) {
+      console.error(err);
+    } else {
+      console.log(result);
+      const botMessage = result.message;
+      conversation.messages.push({ role: "assistant", content: botMessage });
+      await conversation.save();
+      return botMessage;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return "Sorry, I couldn't process your request at the moment.";
+  }
+}
+
+// Fetch response from GPT-4 and save conversation
+async function chatWithGPT(username, prompt) {
+  try {
+    const userMessage = { role: "user", content: prompt };
+
+    let conversation = await Conversation.findOne({ username });
+    if (!conversation) {
+      conversation = new Conversation({ username, messages: [] });
+    }
+
+    const messages = conversation.messages.concat(userMessage);
+    conversation.messages = messages;
+
+    const data = {
+      messages: [{ role: "assistant", content: "Hello! How are you today?" }, ...messages],
+      prompt: prompt,
+      model: "GPT-4",
+      markdown: false
+    };
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const response = await axios.post('https://nexra.aryahcr.cc/api/chat/gpt', data, config);
+
+    if (response.status === 200) {
+      const botMessage = response.data.gpt;
+      conversation.messages.push({ role: "assistant", content: botMessage });
+      await conversation.save();
+      return botMessage;
+    } else {
+      console.error("Error:", response.statusText);
+      return "Sorry, I couldn't process your request at the moment.";
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return "Sorry, I couldn't process your request at the moment.";
+  }
+}
+
+// Endpoint to handle user requests
 app.get('/user', async (req, res) => {
-  const { username, text } = req.query;
-  if (!username || !text) {
+  const { username, query } = req.query;
+  if (!username || !query) {
     return res.status(400).json({
       creator: "Guru",
       status: false,
       text: text,
-      result: "Bad Request: Please provide both username and text parameters."
+      result: "Bad Request: Please provide both username and query parameters."
     });
   }
 
-  const botMessage = await getBotResponse(username, text);
+  const botMessage = await getBotResponse(username, query);
   res.status(200).json({
     creator: "Guru",
     status: true,
-    text: text,
+    text: query,
+    result: botMessage
+  });
+});
+
+// Endpoint to handle Bing requests
+app.get('/bing', async (req, res) => {
+  const { username, query } = req.query;
+  if (!username || !query) {
+    return res.status(400).json({
+      status: false,
+      message: "Bad Request: Please provide both username and query parameters."
+    });
+  }
+
+  const botMessage = await bing(username, query);
+  res.status(200).json({
+    status: true,
+    result: botMessage
+  });
+});
+
+// Endpoint to handle GPT-4 requests
+app.get('/chat-gpt', async (req, res) => {
+  const { username, query } = req.query;
+  if (!username || !query) {
+    return res.status(400).json({
+      status: false,
+      message: "Bad Request: Please provide both username and prompt parameters."
+    });
+  }
+
+  const botMessage = await chatWithGPT(username, query);
+  res.status(200).json({
+    status: true,
     result: botMessage
   });
 });
