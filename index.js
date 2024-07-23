@@ -5,12 +5,11 @@ const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 
 const ACCOUNT_ID = process.env.ACCOUNT_ID || '';
 const API_URL = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai/run/@hf/meta-llama/meta-llama-3-8b-instruct`;
 const API_TOKEN = process.env.API_TOKEN || '';
-
 const mongoURI = process.env.MONGO_URI || '';
 
 mongoose.connect(mongoURI)
@@ -26,6 +25,8 @@ const conversationSchema = new mongoose.Schema({
 });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
+
+app.use(express.static('public'));
 
 let customPrompt = '';
 
