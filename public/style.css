@@ -148,13 +148,15 @@ span.material-symbols-rounded {
 }
 
 /* Markdown styles */
+.chat .chat-details p > * {
+  margin: 0.5rem 0;
+}
 .chat .chat-details p h1,
 .chat .chat-details p h2,
 .chat .chat-details p h3,
 .chat .chat-details p h4,
 .chat .chat-details p h5,
 .chat .chat-details p h6 {
-  margin: 15px 0 5px;
   color: var(--text-color);
 }
 .chat .chat-details p h1 { font-size: 2rem; }
@@ -196,6 +198,33 @@ span.material-symbols-rounded {
 }
 .chat .chat-details p a:hover {
   text-decoration: underline;
+}
+
+/* Code container styling */
+.chat .chat-details .code-container {
+  background-color: var(--incoming-chat-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.chat .chat-details .code-container pre {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.chat .chat-details .code-container span {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: var(--icon-color);
+}
+
+.chat .chat-details .code-container span:hover {
+  color: var(--icon-hover-bg);
 }
 
 /* Typing container styling */

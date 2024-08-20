@@ -59,17 +59,15 @@ const getChatResponse = async (incomingChatDiv) => {
         }
     }
 
-    // Send GET request to API, get response and set the response as paragraph element text
     try {
         const response = await fetch(`${API_URL}?username=${username}&query=${encodeURIComponent(userText)}`, requestOptions);
         const responseData = await response.json();
-        pElement.textContent = responseData.result;
-    } catch (error) { // Add error class to the paragraph element and set error text
+        pElement.innerHTML = marked.parse(responseData.result);
+    } catch (error) {
         pElement.classList.add("error");
         pElement.textContent = "Oops! Something went wrong while retrieving the response. Please try again.";
     }
 
-    // Remove the typing animation, append the paragraph element and save the chats to local storage
     incomingChatDiv.querySelector(".typing-animation").remove();
     incomingChatDiv.querySelector(".chat-details").appendChild(pElement);
     localStorage.setItem("all-chats", chatContainer.innerHTML);
@@ -83,6 +81,29 @@ const copyResponse = (copyBtn) => {
     copyBtn.textContent = "done";
     setTimeout(() => copyBtn.textContent = "content_copy", 1000);
 }
+
+const copyCode = (copyBtn) => {
+    const codeElement = copyBtn.parentElement.querySelector("code");
+    navigator.clipboard.writeText(codeElement.textContent);
+    copyBtn.textContent = "done";
+    setTimeout(() => copyBtn.textContent = "content_copy", 1000);
+  }
+  
+  const showCodeBlock = (codeContent) => {
+    const html = `<div class="chat-content">
+                    <div class="chat-details">
+                      <img src="images/chatbot.jpg" alt="chatbot-img">
+                      <div class="code-container">
+                        <pre><code class="code-block">${codeContent}</code></pre>
+                        <span onclick="copyCode(this)" class="material-symbols-rounded">content_copy</span>
+                      </div>
+                    </div>
+                  </div>`;
+  
+    const incomingChatDiv = createChatElement(html, "incoming");
+    chatContainer.appendChild(incomingChatDiv);
+    chatContainer.scrollTo(0, chatContainer.scrollHeight);
+  }
 
 const showTypingAnimation = () => {
     // Display the typing animation and call the getChatResponse function
